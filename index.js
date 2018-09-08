@@ -5,11 +5,14 @@ const cheerio = require('cheerio')
 const async = require('async')
 
 // Main variables
+const stream = fs.createWriteStream('tntvillage_dump_'+Date.now()+'.txt', {flags:'a'})
 var query = process.argv.slice(2)[0] // Use '+' as wildcard
 var startpage = parseInt(process.argv.slice(2)[1])
 var endpage = parseInt(process.argv.slice(2)[2])
 var lastRelease = parseInt(process.argv.slice(2)[3])
-const stream = fs.createWriteStream('tntvillage_dump_'+Date.now()+'.txt', {flags:'a'})
+if (!lastRelease) {
+	var lastRelease = 0
+}
 String.prototype.indexOfEnd = function(string) {
     var io = this.indexOf(string);
     return io == -1 ? -1 : io + string.length;
@@ -19,9 +22,9 @@ String.prototype.indexOfEnd = function(string) {
 if ( !query || !startpage || !endpage ) {
 	return console.log('Arguments not properly defined.')
 } else {
-	// Cycle queried range of pages
+	// Cycle queried range of pages sequentially
 	var range = Array.from({length: endpage+1-startpage}, (x,i) => i+startpage)
-	async.eachSeries(range, (page, next) => {
+	async.eachSeries(range, (page, nextPage) => {
 		console.log('Dumping page',page)
 		// Dump page
 		request.post({
@@ -38,14 +41,14 @@ if ( !query || !startpage || !endpage ) {
 				var $ = cheerio.load(body,{decodeEntities: false})
 				// Find all release rows
 				var rows = $('.showrelease_tb').find('tr')
-				// Cycle all rows (except the first which contains headers)
-				for (i=1; i<rows.length; i++){
+				// Cycle all rows sequentially (except the first which contains headers)
+				async.eachSeries(rows.slice(1,22), (row, nextRow) => {
 					// Magnet link
-					var magnet_column = $(rows[i]).children().eq(1).children().eq(0)
+					var magnet_column = $(row).children().eq(1).children().eq(0)
 					var magnet_html = $.html(magnet_column)
 					var magnet = $(magnet_html).attr('href')
 					// Category
-					var cat_column = $(rows[i]).children().eq(2).children().eq(0)
+					var cat_column = $(row).children().eq(2).children().eq(0)
 					var cat_html = $.html(cat_column)
 					var cat_link = $(cat_html).attr('href')
 					var cat_code = cat_link.substr(cat_link.indexOfEnd('cat='), 2)
@@ -109,31 +112,38 @@ if ( !query || !startpage || !endpage ) {
 						var cat = 'mobile'
 					}
 					// Release title
-					var title_column = $(rows[i]).children().eq(6).children().eq(0)
+					var title_column = $(row).children().eq(6).children().eq(0)
 					var title = $.text(title_column)
 					// Release link
-					var link_column = $(rows[i]).children().eq(6).children().eq(0)
+					var link_column = $(row).children().eq(6).children().eq(0)
 					var link_html = $.html(link_column)
 					var link = $(link_html).attr('href')
-					var release_id = parseInt(link.substr(link.indexOfEnd('showtopic='),8))
 					// Release description
-					var desc_column = $(rows[i]).children().eq(6)
+					var desc_column = $(row).children().eq(6)
 					var desc_html = $.html(desc_column)
 					var desc = desc_html.substring(
 						desc_html.lastIndexOf('</a>')+5,
 						desc_html.lastIndexOf('</td>')
 					)
+					// Break loop if the target release is reached
+					var release_id = parseInt(link.substr(link.indexOfEnd('showtopic='),8))
 					if (lastRelease>=release_id){
 						const endDiffDump = new Error()
 						endDiffDump.type = 'endDiffDump'
-						return next(endDiffDump)
+						return nextPage(endDiffDump)
 					} else {
 						// Compose tab-separated line and append it to text file
 						var text_line = title + '\t' + desc + '\t' + cat + '\t' + link + '\t' + magnet
 						stream.write(text_line+'\n')
+						nextRow()
 					}
-				}
-				next()
+				}, (innerError) => {
+					if (innerError) {
+						return console.log(innerError)
+					} else {
+						nextPage()
+					}
+				})
 			}
 		)
 	}, (err) => {
