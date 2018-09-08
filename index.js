@@ -132,6 +132,7 @@ if ( !query || !startpage || !endpage ) {
 		if (err) {
 			return console.log(err)
 		} else {
+			stream.end()
 			return console.log('Done!')
 		}
 	})
