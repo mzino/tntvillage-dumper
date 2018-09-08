@@ -113,7 +113,8 @@ if ( !query || !startpage || !endpage ) {
 					}
 					// Release title
 					var title_column = $(row).children().eq(6).children().eq(0)
-					var title = $.text(title_column)
+					var title_raw = $.text(title_column)
+					var title = title_raw.replace(/	/g, '')
 					// Release link
 					var link_column = $(row).children().eq(6).children().eq(0)
 					var link_html = $.html(link_column)
@@ -121,10 +122,11 @@ if ( !query || !startpage || !endpage ) {
 					// Release description
 					var desc_column = $(row).children().eq(6)
 					var desc_html = $.html(desc_column)
-					var desc = desc_html.substring(
+					var desc_raw = desc_html.substring(
 						desc_html.lastIndexOf('</a>')+5,
 						desc_html.lastIndexOf('</td>')
 					)
+					var desc = desc_raw.replace(/	/g, '')
 					// Break loop if the target release is reached
 					var release_id = parseInt(link.substr(link.indexOfEnd('showtopic='),8))
 					if (lastRelease>=release_id){
