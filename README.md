@@ -9,6 +9,8 @@ Node.js script to dump the TNTVillage index to a txt/csv file.
 
 
 ## Usage
+**Tested with node 8.11.4 LTS.**
+
 `node index.js [query] [startpage] [endpage]`
 
 Eaxmple: `node index.js linux 1 3` will search TNTVillage for "linux" and dump pages from 1 to 3 of the results.
