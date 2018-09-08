@@ -8,7 +8,8 @@ const async = require('async')
 var query = process.argv.slice(2)[0] // Use '+' as wildcard
 var startpage = parseInt(process.argv.slice(2)[1])
 var endpage = parseInt(process.argv.slice(2)[2])
-const stream = fs.createWriteStream('tntvillage_dump.txt', {flags:'a'})
+var lastRelease = parseInt(process.argv.slice(2)[3])
+const stream = fs.createWriteStream('tntvillage_dump_'+Date.now()+'.txt', {flags:'a'})
 String.prototype.indexOfEnd = function(string) {
     var io = this.indexOf(string);
     return io == -1 ? -1 : io + string.length;
@@ -20,7 +21,7 @@ if ( !query || !startpage || !endpage ) {
 } else {
 	// Cycle queried range of pages
 	var range = Array.from({length: endpage+1-startpage}, (x,i) => i+startpage)
-	async.eachSeries(range, function(page, next){
+	async.eachSeries(range, (page, next) => {
 		console.log('Dumping page',page)
 		// Dump page
 		request.post({
@@ -30,7 +31,7 @@ if ( !query || !startpage || !endpage ) {
 					page: page,
 					srcrel: query
 				}
-			}, function(err,httpResponse,body){
+			}, (err,httpResponse,body) => {
 				if (err) {
 					return console.log(err)
 				}
@@ -114,6 +115,7 @@ if ( !query || !startpage || !endpage ) {
 					var link_column = $(rows[i]).children().eq(6).children().eq(0)
 					var link_html = $.html(link_column)
 					var link = $(link_html).attr('href')
+					var release_id = parseInt(link.substr(link.indexOfEnd('showtopic='),8))
 					// Release description
 					var desc_column = $(rows[i]).children().eq(6)
 					var desc_html = $.html(desc_column)
@@ -121,19 +123,28 @@ if ( !query || !startpage || !endpage ) {
 						desc_html.lastIndexOf('</a>')+5,
 						desc_html.lastIndexOf('</td>')
 					)
-					// Compose tab-separated line and append it to text file
-					var text_line = title + '\t' + desc + '\t' + cat + '\t' + link + '\t' + magnet
-					stream.write(text_line+'\n')
+					if (lastRelease>=release_id){
+						const endDiffDump = new Error()
+						endDiffDump.type = 'endDiffDump'
+						return next(endDiffDump)
+					} else {
+						// Compose tab-separated line and append it to text file
+						var text_line = title + '\t' + desc + '\t' + cat + '\t' + link + '\t' + magnet
+						stream.write(text_line+'\n')
+					}
 				}
 				next()
 			}
 		)
-	}, function(err){
-		if (err) {
+	}, (err) => {
+		if (err && err.type!=='endDiffDump') {
 			return console.log(err)
+		} else if (err && err.type==='endDiffDump') {
+			stream.end()
+			return console.log('Differential dump done!')
 		} else {
 			stream.end()
-			return console.log('Done!')
+			return console.log('Complete dump done!')
 		}
 	})
 }
