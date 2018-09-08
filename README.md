@@ -1,5 +1,5 @@
 # TNTVillage dumper
-Script to dump the TNTVillage index to a txt/csv file
+Node.js script to dump the TNTVillage index to a txt/csv file.
 
 
 ## Install
