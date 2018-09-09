@@ -110,6 +110,8 @@ if ( !query || !startpage || !endpage ) {
 						var cat = 'magazines'
 					} else if (cat_code=='37') {
 						var cat = 'mobile'
+					} else if (cat_code=='') {
+						var cat = 'misc'
 					}
 					// Release title
 					var title_column = $(row).children().eq(6).children().eq(0)
