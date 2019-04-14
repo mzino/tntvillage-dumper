@@ -28,7 +28,7 @@ if ( !query || !startpage || !endpage ) {
 		console.log('Dumping page',page)
 		// Dump page
 		request.post({
-				url: 'http://www.tntvillage.scambioetico.org/src/releaselist.php',
+				url: 'http://tntvillage.scambioetico.org/src/releaselist.php',
 				form: {
 					cat: '0',
 					page: page,
@@ -41,8 +41,8 @@ if ( !query || !startpage || !endpage ) {
 				var $ = cheerio.load(body,{decodeEntities: false})
 				// Find all release rows
 				var rows = $('.showrelease_tb').find('tr')
-				// Cycle all rows sequentially (except the first which contains headers)
-				async.eachSeries(rows.slice(1,22), (row, nextRow) => {
+				// Cycle all rows sequentially (except the first which contains headers and the new one with the video)
+				async.eachSeries(rows.slice(2,23), (row, nextRow) => {
 					// Magnet link
 					var magnet_column = $(row).children().eq(1).children().eq(0)
 					var magnet_html = $.html(magnet_column)
